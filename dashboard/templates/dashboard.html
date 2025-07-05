@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syslog Security Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .card-counter {
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .card-counter:hover {
+            transform: translateY(-5px);
+            box-shadow: 2px 2px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .severity-badge {
+            padding: 0.35em 0.65em;
+            border-radius: 0.25rem;
+        }
+
+        .severity-critical {
+            background-color: #dc3545;
+        }
+
+        .severity-high {
+            background-color: #fd7e14;
+        }
+
+        .severity-medium {
+            background-color: #ffc107;
+        }
+
+        .severity-low {
+            background-color: #198754;
+        }
+
+        .log-table {
+            font-size: 0.85rem;
+        }
+
+        .log-row:hover {
+            background-color: rgba(0, 0, 0, 0.03);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .status-online {
+            background-color: #28a745;
+        }
+
+        .status-offline {
+            background-color: #dc3545;
+        }
+
+        .source-ip {
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-shield-shaded me-2"></i>
+                Syslog Security Dashboard
+            </a>
+            <div class="d-flex align-items-center text-white">
+                <span class="status-indicator status-online" id="status-indicator"></span>
+                <small>Real-time</small>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Stats Overview -->
+            <div class="col-md-3">
+                <div class="card card-counter mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h5 class="card-title text-muted">Log Volume</h5>
+                                <h2 class="mb-0" id="log-count">0</h2>
+                            </div>
+                            <div class="icon-circle bg-primary text-white">
+                                <i class="bi bi-journal-text fs-1"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between">
+                                <span>Last Hour:</span>
+                                <strong id="log-last-hour">0</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-counter mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h5 class="card-title text-muted">Alerts</h5>
+                                <h2 class="mb-0" id="alert-count">0</h2>
+                            </div>
+                            <div class="icon-circle bg-danger text-white">
+                                <i class="bi bi-bell fs-1"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between">
+                                <span>Critical:</span>
+                                <strong id="critical-count">0</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>High:</span>
+                                <strong id="high-count">0</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Top Sources</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush" id="top-sources">
+                            <!-- Will be populated by JS -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Log Volume Timeline</h5>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-secondary active" data-range="24h">24h</button>
+                            <button class="btn btn-sm btn-outline-secondary" data-range="7d">7d</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="timeline-chart" height="150"></canvas>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Recent Alerts</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Time</th>
+                                                <th>Severity</th>
+                                                <th>Source</th>
+                                                <th>Description</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recent-alerts">
+                                            <!-- Will be populated by JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Log Explorer</h5>
+                                <button class="btn btn-sm btn-outline-primary" id="refresh-logs">
+                                    <i class="bi bi-arrow-repeat"></i> Refresh
+                                </button>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm log-table mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Time</th>
+                                                <th>Host</th>
+                                                <th>Tag</th>
+                                                <th>Message</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="log-entries">
+                                            <!-- Will be populated by JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-white">
+                                <div class="d-flex justify-content-between">
+                                    <button class="btn btn-sm btn-outline-secondary" id="prev-page">
+                                        <i class="bi bi-arrow-left"></i> Prev
+                                    </button>
+                                    <span id="page-info">Page 1 of 1</span>
+                                    <button class="btn btn-sm btn-outline-secondary" id="next-page">
+                                        Next <i class="bi bi-arrow-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let currentPage = 1;
+        let totalPages = 1;
+        let timelineChart;
+        const pageSize = 15;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function () {
+            // Load initial data
+            updateStats();
+            updateTimeline('24h');
+            updateRecentAlerts();
+            updateLogs();
+
+            // Set up periodic updates
+            setInterval(updateStats, 30000);
+            setInterval(updateRecentAlerts, 10000);
+
+            // Set up event listeners
+            document.querySelectorAll('[data-range]').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('[data-range]').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    updateTimeline(this.dataset.range);
+                });
+            });
+
+            document.getElementById('refresh-logs').addEventListener('click', updateLogs);
+            document.getElementById('prev-page').addEventListener('click', () => changePage(-1));
+            document.getElementById('next-page').addEventListener('click', () => changePage(1));
+        });
+
+        // Update stats
+        async function updateStats() {
+            try {
+                const response = await fetch('/stats');
+                const data = await response.json();
+
+                document.getElementById('log-count').textContent = data.log_volume.total.toLocaleString();
+                document.getElementById('log-last-hour').textContent = data.log_volume.last_hour.toLocaleString();
+                document.getElementById('alert-count').textContent = data.alerts.total.toLocaleString();
+                document.getElementById('critical-count').textContent = data.alerts.critical.toLocaleString();
+                document.getElementById('high-count').textContent = data.alerts.high.toLocaleString();
+
+                // Update top sources
+                const topSources = document.getElementById('top-sources');
+                topSources.innerHTML = '';
+                data.alerts.top_sources.forEach(source => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    li.innerHTML = `
+                        <span class="source-ip">${source.ip}</span>
+                        <span class="badge bg-danger rounded-pill">${source.count}</span>
+                    `;
+                    topSources.appendChild(li);
+                });
+            } catch (error) {
+                console.error('Error updating stats:', error);
+            }
+        }
+
+        // Update timeline chart
+        async function updateTimeline(range) {
+            try {
+                const response = await fetch(`/timeline?range=${range}`);
+                const data = await response.json();
+
+                const ctx = document.getElementById('timeline-chart').getContext('2d');
+
+                // Destroy existing chart if it exists
+                if (timelineChart) {
+                    timelineChart.destroy();
+                }
+
+                timelineChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.hours,
+                        datasets: [
+                            {
+                                label: 'Total Logs',
+                                data: data.log_counts,
+                                borderColor: '#0d6efd',
+                                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            },
+                            {
+                                label: 'SSH Events',
+                                data: data.ssh_counts,
+                                borderColor: '#fd7e14',
+                                backgroundColor: 'rgba(253, 126, 20, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            },
+                            {
+                                label: 'Sudo Events',
+                                data: data.sudo_counts,
+                                borderColor: '#198754',
+                                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error updating timeline:', error);
+            }
+        }
+
+        // Update recent alerts
+        async function updateRecentAlerts() {
+            try {
+                const response = await fetch('/alerts?time=1h');
+                const data = await response.json();
+
+                const tableBody = document.getElementById('recent-alerts');
+                tableBody.innerHTML = '';
+
+                data.alerts.slice(0, 5).forEach(alert => {
+                    const row = document.createElement('tr');
+                    row.className = 'log-row';
+                    row.innerHTML = `
+                        <td>${alert.timestamp}</td>
+                        <td>
+                            <span class="badge severity-badge severity-${alert.severity}">
+                                ${alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)}
+                            </span>
+                        </td>
+                        <td class="source-ip">${alert.source_ip || 'N/A'}</td>
+                        <td class="small">${truncate(alert.description, 40)}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error updating alerts:', error);
+            }
+        }
+
+        // Update log entries
+        async function updateLogs() {
+            try {
+                const response = await fetch(`/logs?page=${currentPage}&size=${pageSize}`);
+                const data = await response.json();
+
+                const tableBody = document.getElementById('log-entries');
+                tableBody.innerHTML = '';
+
+                data.logs.forEach(log => {
+                    const row = document.createElement('tr');
+                    row.className = 'log-row';
+                    row.innerHTML = `
+                        <td class="small">${log.timestamp}</td>
+                        <td class="small">${log.hostname}</td>
+                        <td class="small"><span class="badge bg-secondary">${log.tag}</span></td>
+                        <td class="small">${truncate(log.message, 60)}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+                // Update pagination info
+                totalPages = Math.ceil(data.total / pageSize);
+                document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages}`;
+
+                // Update button states
+                document.getElementById('prev-page').disabled = currentPage <= 1;
+                document.getElementById('next-page').disabled = currentPage >= totalPages;
+            } catch (error) {
+                console.error('Error updating logs:', error);
+            }
+        }
+
+        // Change page
+        function changePage(direction) {
+            const newPage = currentPage + direction;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                updateLogs();
+            }
+        }
+
+        // Utility function to truncate text
+        function truncate(text, maxLength) {
+            return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+        }
+    </script>
+</body>
+
+</html>

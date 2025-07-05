@@ -1,0 +1,17 @@
+# General configuration
+nats_url: "nats://nats:4222"
+log_level: "INFO"
+
+# Database configuration
+db_host: "postgres"
+db_port: 5432
+db_user: "syslog_analyzer"
+db_password: "Passwrd#123"
+db_name: "syslog"
+
+# Alerting configuration
+alert_email: "security@example.com"
+alert_slack_webhook: "https://hooks.slack.com/services/XXXXXXXXX"
+
+# Analysis rules path
+rules_path: "/config/rules.yaml"

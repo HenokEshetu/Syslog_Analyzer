@@ -1,0 +1,6 @@
+flask==2.3.2  # Downgrade to be compatible with flask-caching
+psycopg2-binary==2.9.9
+humanize==4.8.0
+gunicorn==21.2.0
+flask-caching==2.0.2
+python-dotenv==1.0.0

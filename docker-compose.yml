@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: syslog
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nats:
+    image: nats:latest
+    ports:
+      - "4222:4222"
+
+  collector:
+    build: ./collector
+    environment:
+      NATS_URL: "nats://nats:4222"
+    ports:
+      - "514:514/udp"
+      - "514:514/tcp"
+    depends_on:
+      - nats
+      - postgres
+    volumes:
+      - ./config/collector:/config  # Add this line
+
+  analyzer:
+    build: ./analyzer
+    environment:
+      NATS_URL: "nats://nats:4222"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: syslog
+    depends_on:
+      - nats
+      - postgres
+    volumes:
+      - ./config/analyzer:/config
+
+  correlator:
+    build: ./analyzer
+    command: python correlation_engine.py
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: syslog
+    depends_on:
+      - postgres
+    volumes:
+      - ./config/analyzer:/config
+
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "5000:5000"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: syslog
+    depends_on:
+      - postgres
+    volumes:
+      - ./config/dashboard:/config
+
+volumes:
+  pgdata:

@@ -1,0 +1,45 @@
+version: 1.0
+
+rules:
+  - id: "SSH_BRUTEFORCE"
+    name: "SSH Bruteforce Attempt"
+    description: "Multiple failed SSH login attempts from the same source"
+    severity: "high"
+    tags: ["ssh", "bruteforce", "authentication"]
+    condition: "Failed password"
+    window: 300  # 5 minutes in seconds
+    threshold: 10
+    actions: ["email", "slack"]
+  
+  - id: "SUDO_ABUSE"
+    name: "Sudo Privilege Abuse"
+    description: "Sudo command execution with potential security impact"
+    severity: "critical"
+    tags: ["privilege", "escalation", "sudo"]
+    condition: "sudo.*COMMAND=(/bin/bash|/bin/sh|/usr/bin/wget|/usr/bin/curl)"
+    actions: ["email", "slack"]
+  
+  - id: "PORT_SCAN"
+    name: "Port Scanning Activity"
+    description: "Multiple connection attempts to different ports"
+    severity: "medium"
+    tags: ["recon", "scanning", "network"]
+    window: 600  # 10 minutes
+    threshold: 25
+    actions: ["slack"]
+  
+  - id: "UNAUTHORIZED_ACCESS"
+    name: "Unauthorized Access Attempt"
+    description: "Access to restricted resources or services"
+    severity: "high"
+    tags: ["access", "authentication"]
+    condition: "Authentication failure|Access denied|Permission denied"
+    actions: ["email", "slack"]
+  
+  - id: "MALICIOUS_COMMAND"
+    name: "Malicious Command Execution"
+    description: "Execution of known malicious commands or scripts"
+    severity: "critical"
+    tags: ["execution", "malware", "command"]
+    condition: "(wget|curl).*(malware|exploit|\.sh)"
+    actions: ["email", "slack"]
