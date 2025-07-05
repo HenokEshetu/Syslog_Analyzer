@@ -9,8 +9,8 @@ app = Flask(__name__)
 DB_CONFIG = {
     "host": "postgres",
     "port": 5432,
-    "user": "postgres",
-    "password": "password",
+    "user": "syslog_analyzer",
+    "password": "Passwrd#123",
     "database": "syslog",
 }
 

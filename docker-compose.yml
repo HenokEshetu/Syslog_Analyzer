@@ -1,16 +1,16 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
     image: postgres:14
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: syslog_analyzer
+      POSTGRES_PASSWORD: Passwrd#123
       POSTGRES_DB: syslog
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -33,7 +33,7 @@ services:
       - nats
       - postgres
     volumes:
-      - ./config/collector:/config  # Add this line
+      - ./config/collector:/config # Add this line
 
   analyzer:
     build: ./analyzer
