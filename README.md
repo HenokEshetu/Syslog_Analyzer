@@ -38,6 +38,9 @@ Syslog Analyzer is a modular, real-time security analytics platform designed to 
 
 ## Quick Start
 
+### Screenshot
+<img src="https://github.com/HenokEshetu/Syslog_Analyzer/blob/main/project-3.png?raw=true" width="100%" alt="" />
+
 ### Prerequisites
 
 - [Docker](https://www.docker.com/)
